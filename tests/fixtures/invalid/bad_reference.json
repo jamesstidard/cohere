@@ -1,0 +1,28 @@
+{
+  "description": "Invalid: edge references non-existent node",
+  "schema": {
+    "x-references": [
+      { 
+        "from": "edges[*].from", 
+        "to": ["nodes[*].name"],
+        "message": "Edge 'from' references unknown node '{{value}}'"
+      },
+      { 
+        "from": "edges[*].to", 
+        "to": ["nodes[*].name"],
+        "message": "Edge 'to' references unknown node '{{value}}'"
+      }
+    ]
+  },
+  "data": {
+    "nodes": [
+      { "name": "foo" }
+    ],
+    "edges": [
+      { "name": "edge1", "from": "foo", "to": "nonexistent" }
+    ]
+  },
+  "expectedErrors": [
+    { "value": "nonexistent", "path": "edges[0].to" }
+  ]
+}

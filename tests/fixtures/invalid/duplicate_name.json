@@ -1,0 +1,23 @@
+{
+  "description": "Invalid: duplicate name across nodes and edges",
+  "schema": {
+    "x-uniqueAcross": [
+      { 
+        "paths": ["nodes[*].name", "edges[*].name"],
+        "message": "Names must be unique. Duplicate: '{{value}}' at {{path}}"
+      }
+    ]
+  },
+  "data": {
+    "nodes": [
+      { "name": "foo" },
+      { "name": "bar" }
+    ],
+    "edges": [
+      { "name": "foo", "from": "foo", "to": "bar" }
+    ]
+  },
+  "expectedErrors": [
+    { "value": "foo", "path": "edges[0].name" }
+  ]
+}

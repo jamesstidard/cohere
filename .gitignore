@@ -1,0 +1,130 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+.eggs/
+*.env
+.venv/
+venv/
+ENV/
+
+# JavaScript/Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log
+.DS_Store
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.nfs*
+
+# General
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+
+# Misc
+*.orig
+*.rej
+*.sublime-workspace
+*.sublime-project
+
+# Coverage
+coverage/
+*.cover
+*.coverage
+*.cov
+*.lcov
+
+# Test output
+test-output/
+
+# Build artifacts
+dist/
+build/
+
+# Editor backups
+*~
+*.bak
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# By language
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+.eggs/
+*.env
+.venv/
+venv/
+ENV/
+# JavaScript/Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+# Linux
+*~
+.nfs*

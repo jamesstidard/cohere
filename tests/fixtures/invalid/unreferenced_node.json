@@ -1,0 +1,26 @@
+{
+  "description": "Invalid: node is never referenced by any edge",
+  "schema": {
+    "x-referencedBy": [
+      { 
+        "target": "nodes[*].name", 
+        "from": ["edges[*].from", "edges[*].to"],
+        "min": 1,
+        "message": "Node '{{value}}' is not referenced by any edge"
+      }
+    ]
+  },
+  "data": {
+    "nodes": [
+      { "name": "foo" },
+      { "name": "bar" },
+      { "name": "orphan" }
+    ],
+    "edges": [
+      { "name": "edge1", "from": "foo", "to": "bar" }
+    ]
+  },
+  "expectedErrors": [
+    { "value": "orphan", "path": "nodes[2].name" }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "description": "Simple valid graph with unique names and valid references",
+  "schema": {
+    "x-uniqueAcross": [
+      { "paths": ["nodes[*].name", "edges[*].name"] }
+    ],
+    "x-references": [
+      { "from": "edges[*].from", "to": ["nodes[*].name"] },
+      { "from": "edges[*].to", "to": ["nodes[*].name"] }
+    ]
+  },
+  "data": {
+    "nodes": [
+      { "name": "foo" },
+      { "name": "bar" }
+    ],
+    "edges": [
+      { "name": "baz", "from": "foo", "to": "bar" }
+    ]
+  }
+}
