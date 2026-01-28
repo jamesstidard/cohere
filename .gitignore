@@ -56,6 +56,10 @@ $RECYCLE.BIN/
 *.tmp
 *.log
 
+# Dev environment tools
+mise.toml
+.mise.toml
+
 # Misc
 *.orig
 *.rej
