@@ -1,0 +1,15 @@
+{
+  "description": "Valid: standard JSON Schema only (no x- keywords)",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string" },
+      "age": { "type": "number", "minimum": 0 }
+    },
+    "required": ["name"]
+  },
+  "data": {
+    "name": "Alice",
+    "age": 30
+  }
+}

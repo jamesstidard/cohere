@@ -27,6 +27,12 @@ impl std::error::Error for ValidationError {}
 pub fn validate(schema: &Schema, data: &Value) -> ValidationResult {
     let mut errors = Vec::new();
 
+    // Standard JSON Schema validation first
+    if let Some(ref validator) = schema.json_schema {
+        errors.extend(validate_json_schema(validator, data));
+    }
+
+    // Custom x- keyword validation
     for rule in &schema.unique_across {
         errors.extend(validate_unique_across(rule, data));
     }
@@ -44,6 +50,57 @@ pub fn validate(schema: &Schema, data: &Value) -> ValidationResult {
     } else {
         Err(errors)
     }
+}
+
+fn validate_json_schema(
+    validator: &jsonschema::Validator,
+    data: &Value,
+) -> Vec<ValidationError> {
+    validator
+        .iter_errors(data)
+        .map(|e| convert_jsonschema_error(&e))
+        .collect()
+}
+
+fn convert_jsonschema_error(error: &jsonschema::ValidationError) -> ValidationError {
+    // Convert JSONPointer path (/foo/0/bar) to JSONPath (foo[0].bar)
+    let path = jsonpointer_to_jsonpath(error.instance_path().as_str());
+
+    // Get the failing value as string
+    let value = value_to_string(error.instance());
+
+    ValidationError {
+        message: error.to_string(),
+        path: if path.is_empty() { None } else { Some(path) },
+        value: Some(value),
+    }
+}
+
+fn jsonpointer_to_jsonpath(pointer: &str) -> String {
+    if pointer.is_empty() || pointer == "/" {
+        return String::new();
+    }
+
+    // JSONPointer: /nodes/0/name
+    // JSONPath: nodes[0].name
+
+    let segments: Vec<&str> = pointer.trim_start_matches('/').split('/').collect();
+    let mut result = String::new();
+
+    for (i, segment) in segments.iter().enumerate() {
+        // Check if segment is a number (array index)
+        if segment.parse::<usize>().is_ok() {
+            result.push_str(&format!("[{}]", segment));
+        } else {
+            // Field name - add dot if result is not empty and doesn't end with a dot
+            if !result.is_empty() && i > 0 {
+                result.push('.');
+            }
+            result.push_str(segment);
+        }
+    }
+
+    result
 }
 
 fn validate_unique_across(rule: &UniqueAcrossRule, data: &Value) -> Vec<ValidationError> {
@@ -195,6 +252,164 @@ fn interpolate_message(template: &str, value: &Value, path: &str, index: Option<
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_jsonpointer_to_jsonpath() {
+        assert_eq!(jsonpointer_to_jsonpath(""), "");
+        assert_eq!(jsonpointer_to_jsonpath("/"), "");
+        assert_eq!(jsonpointer_to_jsonpath("/nodes"), "nodes");
+        assert_eq!(jsonpointer_to_jsonpath("/nodes/0"), "nodes[0]");
+        assert_eq!(jsonpointer_to_jsonpath("/nodes/0/name"), "nodes[0].name");
+        assert_eq!(
+            jsonpointer_to_jsonpath("/users/0/addresses/1/city"),
+            "users[0].addresses[1].city"
+        );
+    }
+
+    #[test]
+    fn test_standard_json_schema_valid() {
+        let schema = Schema::parse(json!({
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" }
+            },
+            "required": ["name"]
+        }))
+        .unwrap();
+
+        let valid = json!({ "name": "Alice" });
+        assert!(validate(&schema, &valid).is_ok());
+    }
+
+    #[test]
+    fn test_standard_json_schema_invalid_type() {
+        let schema = Schema::parse(json!({
+            "type": "object",
+            "properties": {
+                "age": { "type": "number" }
+            }
+        }))
+        .unwrap();
+
+        let invalid = json!({ "age": "not-a-number" });
+        let result = validate(&schema, &invalid);
+        assert!(result.is_err());
+
+        let errors = result.unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].path, Some("age".to_string()));
+    }
+
+    #[test]
+    fn test_standard_json_schema_required_missing() {
+        let schema = Schema::parse(json!({
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" }
+            },
+            "required": ["name"]
+        }))
+        .unwrap();
+
+        let invalid = json!({});
+        let result = validate(&schema, &invalid);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_combined_validation_both_pass() {
+        let schema = Schema::parse(json!({
+            "type": "object",
+            "properties": {
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": { "type": "string" }
+                        },
+                        "required": ["name"]
+                    }
+                }
+            },
+            "x-uniqueAcross": [
+                { "paths": ["nodes[*].name"] }
+            ]
+        }))
+        .unwrap();
+
+        let valid = json!({
+            "nodes": [
+                { "name": "a" },
+                { "name": "b" }
+            ]
+        });
+
+        assert!(validate(&schema, &valid).is_ok());
+    }
+
+    #[test]
+    fn test_combined_validation_both_fail() {
+        let schema = Schema::parse(json!({
+            "type": "object",
+            "properties": {
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": { "type": "string" }
+                        },
+                        "required": ["name"]
+                    }
+                }
+            },
+            "x-uniqueAcross": [
+                { "paths": ["nodes[*].name"] }
+            ]
+        }))
+        .unwrap();
+
+        let invalid = json!({
+            "nodes": [
+                { "name": "a" },
+                { "name": "a" },  // duplicate (x-uniqueAcross violation)
+                { "age": 30 }      // missing required "name" (JSON Schema)
+            ]
+        });
+
+        let result = validate(&schema, &invalid);
+        assert!(result.is_err());
+
+        let errors = result.unwrap_err();
+        assert!(errors.len() >= 2); // At least one from each validator
+    }
+
+    #[test]
+    fn test_x_keywords_only_schema() {
+        // Schema with ONLY x- keywords should work
+        let schema = Schema::parse(json!({
+            "x-uniqueAcross": [
+                { "paths": ["items[*].id"] }
+            ]
+        }))
+        .unwrap();
+
+        assert!(schema.json_schema.is_none());
+
+        let valid = json!({ "items": [{ "id": "a" }, { "id": "b" }] });
+        assert!(validate(&schema, &valid).is_ok());
+    }
+
+    #[test]
+    fn test_empty_schema() {
+        // Empty schema should always be valid
+        let schema = Schema::parse(json!({})).unwrap();
+        assert!(schema.json_schema.is_none());
+
+        let data = json!({ "anything": "goes" });
+        assert!(validate(&schema, &data).is_ok());
+    }
 
     #[test]
     fn test_validate_unique_across() {

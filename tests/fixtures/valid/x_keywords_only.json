@@ -1,0 +1,15 @@
+{
+  "description": "Valid: only x- keywords (ensures backward compatibility)",
+  "schema": {
+    "x-uniqueAcross": [
+      { "paths": ["items[*].id"] }
+    ]
+  },
+  "data": {
+    "items": [
+      { "id": "a" },
+      { "id": "b" },
+      { "id": "c" }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "description": "Valid: both JSON Schema and x- keywords",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "users": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" }
+          },
+          "required": ["name"]
+        }
+      },
+      "organisations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "members": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["name", "members"]
+        }
+      }
+    },
+    "x-uniqueAcross": [
+      { "paths": ["users[*].name", "organisations[*].name"] }
+    ],
+    "x-references": [
+      { "from": "organisations[*].members[*]", "to": ["users[*].name"] }
+    ]
+  },
+  "data": {
+    "users": [{ "name": "alice" }],
+    "organisations": [{ "name": "acme", "members": ["alice"] }]
+  }
+}

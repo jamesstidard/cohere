@@ -8,6 +8,8 @@ use crate::JsonPath;
 pub struct Schema {
     /// The raw JSON Schema (for potential future standard validation)
     pub raw: Value,
+    /// Compiled JSON Schema validator (None if schema has no standard keywords)
+    pub json_schema: Option<jsonschema::Validator>,
     /// Parsed x-uniqueAcross rules
     pub unique_across: Vec<UniqueAcrossRule>,
     /// Parsed x-references rules
@@ -92,8 +94,12 @@ impl Schema {
         let references = Self::parse_references(&value)?;
         let referenced_by = Self::parse_referenced_by(&value)?;
 
+        // Compile JSON Schema validator if schema has standard keywords
+        let json_schema = Self::compile_json_schema(&value)?;
+
         Ok(Self {
             raw: value,
+            json_schema,
             unique_across,
             references,
             referenced_by,
@@ -186,6 +192,29 @@ impl Schema {
             })
             .collect()
     }
+
+    /// Compile JSON Schema validator if schema has standard keywords
+    fn compile_json_schema(value: &Value) -> Result<Option<jsonschema::Validator>, SchemaError> {
+        // Check if schema has any standard JSON Schema keywords
+        if !Self::has_standard_keywords(value) {
+            return Ok(None);
+        }
+
+        // Use validator_for for auto-draft detection
+        match jsonschema::validator_for(value) {
+            Ok(compiled) => Ok(Some(compiled)),
+            Err(e) => Err(SchemaError::JsonSchemaCompilation(e.to_string())),
+        }
+    }
+
+    /// Check if schema has any standard JSON Schema keywords (non x- prefixed)
+    fn has_standard_keywords(value: &Value) -> bool {
+        if let Some(obj) = value.as_object() {
+            obj.keys().any(|k| !k.starts_with("x-"))
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -194,6 +223,8 @@ pub enum SchemaError {
     InvalidRule(&'static str, String),
     #[error("invalid path '{0}': {1}")]
     InvalidPath(String, String),
+    #[error("JSON Schema compilation failed: {0}")]
+    JsonSchemaCompilation(String),
 }
 
 /// Enum for downstream code to work with any rule type

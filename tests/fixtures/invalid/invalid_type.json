@@ -1,0 +1,15 @@
+{
+  "description": "Invalid: type mismatch (JSON Schema)",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "age": { "type": "number" }
+    }
+  },
+  "data": {
+    "age": "not-a-number"
+  },
+  "expectedErrors": [
+    { "path": "age" }
+  ]
+}

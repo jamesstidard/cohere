@@ -1,0 +1,16 @@
+{
+  "description": "Invalid: required field missing (JSON Schema)",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string" }
+    },
+    "required": ["name"]
+  },
+  "data": {
+    "age": 30
+  },
+  "expectedErrors": [
+    { "path": null }
+  ]
+}

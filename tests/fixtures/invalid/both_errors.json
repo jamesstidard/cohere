@@ -1,0 +1,32 @@
+{
+  "description": "Invalid: both JSON Schema and custom validation fail",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "users": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" }
+          },
+          "required": ["name"]
+        }
+      }
+    },
+    "x-uniqueAcross": [
+      { "paths": ["users[*].name"] }
+    ]
+  },
+  "data": {
+    "users": [
+      { "name": "alice" },
+      { "name": "alice" },
+      { "age": 30 }
+    ]
+  },
+  "expectedErrors": [
+    { "path": "users[2]" },
+    { "path": "users[1].name" }
+  ]
+}
