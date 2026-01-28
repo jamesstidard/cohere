@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Validator - JavaScript Example</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 30px; }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .result {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .valid {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .invalid {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .error {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Graph Validator - JavaScript Example</h1>
+    <p>This example demonstrates the graph-validator library with WASM bindings.</p>
+
+    <h2>Example 1: Users and Organizations</h2>
+    <p>This validates relationships between users and organizations.</p>
+    <button onclick="runUsersExample()">Run Example</button>
+    <div id="users-result"></div>
+
+    <h2>Example 2: Graph Nodes and Edges</h2>
+    <p>This validates a node/edge graph structure.</p>
+    <button onclick="runGraphExample()">Run Example</button>
+    <div id="graph-result"></div>
+
+    <h2>Example 3: Invalid Data</h2>
+    <p>This demonstrates validation errors when data violates constraints.</p>
+    <button onclick="runInvalidExample()">Run Example</button>
+    <div id="invalid-result"></div>
+
+    <script type="module">
+        import init, { validate_graph } from '../../crates/wasm/pkg/graph_validator_wasm.js';
+
+        // Initialize WASM
+        await init();
+
+        // Make functions globally available
+        window.runUsersExample = function() {
+            const schema = {
+                "x-uniqueAcross": [
+                    {
+                        "paths": ["users[*].name", "organisations[*].name"],
+                        "message": "Names must be unique. Duplicate: '{{value}}'"
+                    }
+                ],
+                "x-references": [
+                    {
+                        "from": "organisations[*].members[*]",
+                        "to": ["users[*].name"],
+                        "message": "Unknown member '{{value}}'"
+                    }
+                ],
+                "x-referencedBy": [
+                    {
+                        "target": "users[*].name",
+                        "from": ["organisations[*].members[*]"],
+                        "min": 1,
+                        "message": "User '{{value}}' is not in any organisation"
+                    }
+                ]
+            };
+
+            const data = {
+                "users": [
+                    { "name": "alice", "age": 32 },
+                    { "name": "bob", "age": 28 }
+                ],
+                "organisations": [
+                    { "name": "acme", "members": ["alice", "bob"] }
+                ]
+            };
+
+            const result = validate_graph(JSON.stringify(schema), JSON.stringify(data));
+            displayResult('users-result', result, schema, data);
+        };
+
+        window.runGraphExample = function() {
+            const schema = {
+                "x-uniqueAcross": [
+                    { "paths": ["nodes[*].name", "edges[*].name"] }
+                ],
+                "x-references": [
+                    { "from": "edges[*].from", "to": ["nodes[*].name"] },
+                    { "from": "edges[*].to", "to": ["nodes[*].name"] }
+                ],
+                "x-referencedBy": [
+                    {
+                        "target": "nodes[*].name",
+                        "from": ["edges[*].from", "edges[*].to"],
+                        "min": 1
+                    }
+                ]
+            };
+
+            const data = {
+                "nodes": [
+                    { "name": "start" },
+                    { "name": "end" }
+                ],
+                "edges": [
+                    { "name": "connection", "from": "start", "to": "end" }
+                ]
+            };
+
+            const result = validate_graph(JSON.stringify(schema), JSON.stringify(data));
+            displayResult('graph-result', result, schema, data);
+        };
+
+        window.runInvalidExample = function() {
+            const schema = {
+                "x-references": [
+                    {
+                        "from": "organisations[*].members[*]",
+                        "to": ["users[*].name"],
+                        "message": "Unknown member '{{value}}' at {{path}}"
+                    }
+                ],
+                "x-referencedBy": [
+                    {
+                        "target": "users[*].name",
+                        "from": ["organisations[*].members[*]"],
+                        "min": 1,
+                        "message": "User '{{value}}' is not in any organisation"
+                    }
+                ]
+            };
+
+            const data = {
+                "users": [
+                    { "name": "alice", "age": 32 },
+                    { "name": "orphan", "age": 25 }
+                ],
+                "organisations": [
+                    { "name": "acme", "members": ["alice", "charlie"] }
+                ]
+            };
+
+            const result = validate_graph(JSON.stringify(schema), JSON.stringify(data));
+            displayResult('invalid-result', result, schema, data);
+        };
+
+        function displayResult(elementId, result, schema, data) {
+            const container = document.getElementById(elementId);
+            const statusClass = result.valid ? 'valid' : 'invalid';
+            const statusText = result.valid ? '✓ Valid' : '✗ Invalid';
+
+            let html = `
+                <div class="result ${statusClass}">
+                    <strong>${statusText}</strong>
+                    ${result.errors.length > 0 ? '<div style="margin-top: 10px;"><strong>Errors:</strong></div>' : ''}
+                    ${result.errors.map(err => `<div class="error">• ${err.message}</div>`).join('')}
+                </div>
+                <details>
+                    <summary style="cursor: pointer; margin-top: 10px;">View Schema</summary>
+                    <pre>${JSON.stringify(schema, null, 2)}</pre>
+                </details>
+                <details>
+                    <summary style="cursor: pointer;">View Data</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        console.log('Graph Validator initialized successfully!');
+    </script>
+</body>
+</html>
