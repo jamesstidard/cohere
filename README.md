@@ -1,10 +1,12 @@
 # graph-validator
 
-A portable JSON validator with custom JSON Schema extensions for relational constraints.
+A portable JSON/TOML validator with custom JSON Schema extensions for relational constraints.
 
 Write your validation logic once in Rust, then use it everywhere:
 - **JavaScript/TypeScript** — via WebAssembly
 - **Python** — via native extension (PyO3)
+
+Validates both JSON and TOML data, with validation errors mapped back to source locations (line/column) for inline editor diagnostics.
 
 ## The Problem
 
@@ -205,41 +207,64 @@ const schema = JSON.stringify({
   ]
 });
 
-const data = JSON.stringify({
-  users: [{ name: "alice" }, { name: "bob" }],
-  organisations: [{ name: "acme", members: ["alice", "bob"] }]
-});
+const data = `{
+  "users": [{"name": "alice"}, {"name": "bob"}],
+  "organisations": [{"name": "acme", "members": ["alice", "bob"]}]
+}`;
 
 const result = validate_graph(schema, data);
 console.log(result.valid);  // true
 console.log(result.errors); // []
+
+// Errors include source locations (line/column)
+for (const error of result.errors) {
+  console.log(`${error.message} (line ${error.line}, col ${error.column})`);
+}
 ```
 
 ### Python
 
 ```python
 import graph_validator
+import json
 
-schema = '''
+schema = json.dumps({
+    "x-references": [
+        {"from": "organisations[*].members[*]", "to": ["users[*].name"]}
+    ]
+})
+
+# JSON validation (with line/column in errors)
+data_json = """
 {
-  "x-references": [
-    { "from": "organisations[*].members[*]", "to": ["users[*].name"] }
+  "users": [
+    {"name": "alice"}
+  ],
+  "organisations": [
+    {"name": "acme", "members": ["alice"]}
   ]
 }
-'''
-
-data = '''
-{
-  "users": [{"name": "alice"}, {"name": "bob"}],
-  "organisations": [{"name": "acme", "members": ["alice", "bob"]}]
-}
-'''
-
-result = graph_validator.validate_graph(schema, data)
+"""
+result = graph_validator.validate_graph(schema, data_json)
 print(result.valid)   # True
-print(result.errors)  # []
 
-# Or use dicts directly
+# TOML validation (with line/column in errors)
+data_toml = """
+[[users]]
+name = "alice"
+
+[[organisations]]
+name = "acme"
+members = ["alice"]
+"""
+result = graph_validator.validate_graph_toml(schema, data_toml)
+print(result.valid)   # True
+
+# Errors include source locations
+for error in result.errors:
+    print(f"{error.message} (line {error.line}, col {error.column})")
+
+# Or use dicts directly (no source locations)
 result = graph_validator.validate_graph_dict(schema_dict, data_dict)
 ```
 
@@ -270,9 +295,12 @@ graph-validator/
 │   ├── core/           # Core validation logic (pure Rust)
 │   │   └── src/
 │   │       ├── lib.rs
-│   │       ├── jsonpath.rs   # JSONPath parser & evaluator
-│   │       ├── schema.rs     # x- keyword parsing
-│   │       └── validate.rs   # Validation logic
+│   │       ├── jsonpath.rs     # JSONPath parser & evaluator
+│   │       ├── schema.rs       # x- keyword parsing
+│   │       ├── validate.rs     # Validation logic
+│   │       ├── source_map.rs   # Shared source location types
+│   │       ├── json.rs         # JSON source map builder
+│   │       └── toml.rs         # TOML→JSON conversion with source map
 │   ├── wasm/           # WASM bindings (wasm-bindgen)
 │   └── python/         # Python bindings (PyO3)
 └── tests/fixtures/     # Test cases
