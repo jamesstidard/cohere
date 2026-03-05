@@ -1,5 +1,5 @@
 [package]
-name = "graph-validator-core"
+name = "cohere-core"
 version = "0.1.0"
 edition = "2021"
 

@@ -1,5 +1,5 @@
 [package]
-name = "graph-validator-wasm"
+name = "cohere-wasm"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-graph-validator-core = { path = "../core" }
+cohere-core = { path = "../core" }
 wasm-bindgen = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

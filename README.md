@@ -1,4 +1,4 @@
-# graph-validator
+# cohere
 
 A portable JSON/TOML validator with custom JSON Schema extensions for relational constraints.
 
@@ -173,8 +173,8 @@ cargo install wasm-pack maturin
 
 ### Core library
 ```bash
-cargo build -p graph-validator-core
-cargo test -p graph-validator-core
+cargo build -p cohere-core
+cargo test -p cohere-core
 ```
 
 ### WASM (for JavaScript)
@@ -197,7 +197,7 @@ maturin build --release  # Build wheel
 ### JavaScript
 
 ```javascript
-import init, { validate_graph, validate_graph_toml } from './pkg/graph_validator_wasm.js';
+import init, { validate, validate_toml } from './pkg/cohere_wasm.js';
 
 await init();
 
@@ -213,7 +213,7 @@ const data = `{
   "organisations": [{"name": "acme", "members": ["alice", "bob"]}]
 }`;
 
-const result = validate_graph(schema, data);
+const result = validate(schema, data);
 console.log(result.valid);  // true
 console.log(result.errors); // []
 
@@ -230,7 +230,7 @@ name = "acme"
 members = ["alice", "bob"]
 `;
 
-const tomlResult = validate_graph_toml(schema, toml);
+const tomlResult = validate_toml(schema, toml);
 console.log(tomlResult.valid);  // true
 
 // Errors include source locations (line/column)
@@ -242,7 +242,7 @@ for (const error of result.errors) {
 ### Python
 
 ```python
-import graph_validator
+import cohere
 import json
 
 schema = json.dumps({
@@ -262,7 +262,7 @@ data_json = """
   ]
 }
 """
-result = graph_validator.validate_graph(schema, data_json)
+result = cohere.validate(schema, data_json)
 print(result.valid)   # True
 
 # TOML validation (with line/column in errors)
@@ -274,7 +274,7 @@ name = "alice"
 name = "acme"
 members = ["alice"]
 """
-result = graph_validator.validate_graph_toml(schema, data_toml)
+result = cohere.validate_toml_str(schema, data_toml)
 print(result.valid)   # True
 
 # Errors include source locations
@@ -282,7 +282,7 @@ for error in result.errors:
     print(f"{error.message} (line {error.line}, col {error.column})")
 
 # Or use dicts directly (no source locations)
-result = graph_validator.validate_graph_dict(schema_dict, data_dict)
+result = cohere.validate_dict(schema_dict, data_dict)
 ```
 
 ## Error Message Placeholders
@@ -307,7 +307,7 @@ Custom messages support these placeholders:
 ## Project Structure
 
 ```
-graph-validator/
+cohere/
 ├── crates/
 │   ├── core/           # Core validation logic (pure Rust)
 │   │   └── src/

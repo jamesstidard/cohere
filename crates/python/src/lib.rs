@@ -1,4 +1,4 @@
-use graph_validator_core::{validate_json, validate_toml, Schema, ValidationError};
+use cohere_core::{validate_json, validate_toml, Schema, ValidationError};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -77,7 +77,7 @@ impl ValidationResult {
 /// Returns:
 ///     ValidationResult with `valid` bool and `errors` list (with line/column)
 #[pyfunction]
-fn validate_graph(schema_json: &str, data_json: &str) -> PyResult<ValidationResult> {
+fn validate(schema_json: &str, data_json: &str) -> PyResult<ValidationResult> {
     let schema_value: serde_json::Value = serde_json::from_str(schema_json)
         .map_err(|e| PyValueError::new_err(format!("Invalid schema JSON: {}", e)))?;
 
@@ -101,10 +101,10 @@ fn validate_graph(schema_json: &str, data_json: &str) -> PyResult<ValidationResu
 
 /// Validate using Python dicts instead of JSON strings
 #[pyfunction]
-fn validate_graph_dict(py: Python<'_>, schema: &PyDict, data: &PyDict) -> PyResult<ValidationResult> {
+fn validate_dict(py: Python<'_>, schema: &PyDict, data: &PyDict) -> PyResult<ValidationResult> {
     let schema_json = dict_to_json_string(py, schema)?;
     let data_json = dict_to_json_string(py, data)?;
-    validate_graph(&schema_json, &data_json)
+    validate(&schema_json, &data_json)
 }
 
 fn dict_to_json_string(py: Python<'_>, dict: &PyDict) -> PyResult<String> {
@@ -124,7 +124,7 @@ fn dict_to_json_string(py: Python<'_>, dict: &PyDict) -> PyResult<String> {
 /// Returns:
 ///     ValidationResult with `valid` bool and `errors` list (with line/column)
 #[pyfunction]
-fn validate_graph_toml(schema_json: &str, data_toml: &str) -> PyResult<ValidationResult> {
+fn validate_toml_str(schema_json: &str, data_toml: &str) -> PyResult<ValidationResult> {
     let schema_value: serde_json::Value = serde_json::from_str(schema_json)
         .map_err(|e| PyValueError::new_err(format!("Invalid schema JSON: {}", e)))?;
 
@@ -159,10 +159,10 @@ fn parse_schema(schema_json: &str) -> PyResult<()> {
 }
 
 #[pymodule]
-fn graph_validator(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(validate_graph, m)?)?;
-    m.add_function(wrap_pyfunction!(validate_graph_dict, m)?)?;
-    m.add_function(wrap_pyfunction!(validate_graph_toml, m)?)?;
+fn cohere(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(validate, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_dict, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_toml_str, m)?)?;
     m.add_function(wrap_pyfunction!(parse_schema, m)?)?;
     m.add_class::<ValidationResult>()?;
     m.add_class::<PyValidationError>()?;

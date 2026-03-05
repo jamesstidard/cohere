@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Basic usage examples for graph-validator Python bindings.
+Basic usage examples for cohere Python bindings.
 
 Run this after installing the package:
     cd crates/python
     maturin develop
     cd ../../examples/python
-    python example.py
+    python main.py
 """
 
-import graph_validator
+import cohere
 import json
 
 
@@ -27,7 +27,7 @@ def print_result(title, result):
 
 
 def example1_json_strings():
-    """Example using JSON strings (validate_graph)."""
+    """Example using JSON strings (validate)."""
     schema = '''
     {
       "x-uniqueAcross": [
@@ -66,12 +66,12 @@ def example1_json_strings():
     }
     '''
 
-    result = graph_validator.validate_graph(schema, data)
+    result = cohere.validate(schema, data)
     print_result("Example 1: Users and Organizations (JSON Strings)", result)
 
 
 def example2_python_dicts():
-    """Example using Python dicts (validate_graph_dict)."""
+    """Example using Python dicts (validate_dict)."""
     schema = {
         "x-references": [
             {
@@ -100,7 +100,7 @@ def example2_python_dicts():
         ]
     }
 
-    result = graph_validator.validate_graph_dict(schema, data)
+    result = cohere.validate_dict(schema, data)
     print_result("Example 2: Invalid Data (Python Dicts)", result)
 
 
@@ -136,12 +136,12 @@ def example3_graph_structure():
         ]
     }
 
-    result = graph_validator.validate_graph_dict(schema, data)
+    result = cohere.validate_dict(schema, data)
     print_result("Example 3: Graph Nodes and Edges", result)
 
 
 def example4_toml_validation():
-    """Example using TOML data (validate_graph_toml)."""
+    """Example using TOML data (validate_toml_str)."""
     schema = json.dumps({
         "x-uniqueAcross": [
             {
@@ -170,7 +170,7 @@ name = "acme"
 members = ["alice", "charlie"]
 """
 
-    result = graph_validator.validate_graph_toml(schema, data_toml)
+    result = cohere.validate_toml_str(schema, data_toml)
     print(f"\n{'=' * 60}")
     print("Example 4: TOML Validation (with line/column)")
     print('=' * 60)
@@ -204,18 +204,18 @@ def example5_using_bool():
     }
 
     # ValidationResult can be used in boolean context
-    result1 = graph_validator.validate_graph_dict(schema, valid_data)
+    result1 = cohere.validate_dict(schema, valid_data)
     if result1:
         print("\n✓ Valid data passed validation")
 
-    result2 = graph_validator.validate_graph_dict(schema, invalid_data)
+    result2 = cohere.validate_dict(schema, invalid_data)
     if not result2:
         print("✗ Invalid data failed validation")
         print(f"  Errors: {result2.errors}")
 
 
 if __name__ == "__main__":
-    print("Graph Validator - Python Examples")
+    print("Cohere - Python Examples")
 
     example1_json_strings()
     example2_python_dicts()

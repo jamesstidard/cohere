@@ -1,7 +1,7 @@
-// Basic usage example for graph-validator WASM bindings
+// Basic usage example for cohere WASM bindings
 // This file shows the core API usage without the HTML wrapper
 
-import init, { validate_graph, validate_graph_toml } from '../../crates/wasm/pkg/graph_validator_wasm.js';
+import init, { validate, validate_toml } from '../../crates/wasm/pkg/cohere_wasm.js';
 
 // Initialize WASM module
 await init();
@@ -43,7 +43,7 @@ const data1 = JSON.stringify({
   ]
 });
 
-const result1 = validate_graph(schema1, data1);
+const result1 = validate(schema1, data1);
 console.log('Valid:', result1.valid);
 console.log('Errors:', result1.errors);
 console.log('');
@@ -70,7 +70,7 @@ const data2 = JSON.stringify({
   ]
 });
 
-const result2 = validate_graph(schema2, data2);
+const result2 = validate(schema2, data2);
 console.log('Valid:', result2.valid);
 console.log('Errors:', result2.errors);
 console.log('');
@@ -105,7 +105,7 @@ const data3 = JSON.stringify({
   ]
 });
 
-const result3 = validate_graph(schema3, data3);
+const result3 = validate(schema3, data3);
 console.log('Valid:', result3.valid);
 console.log('Errors:', result3.errors);
 console.log('');
@@ -133,7 +133,7 @@ const data4 = `{
   ]
 }`;
 
-const result4 = validate_graph(schema4, data4);
+const result4 = validate(schema4, data4);
 console.log('Valid:', result4.valid);
 for (const error of result4.errors) {
   const location = error.line ? ` (line ${error.line}, col ${error.column})` : '';
@@ -162,7 +162,7 @@ name = "acme"
 members = ["alice", "charlie"]
 `;
 
-const result5 = validate_graph_toml(schema5, data5);
+const result5 = validate_toml(schema5, data5);
 console.log('Valid:', result5.valid);
 for (const error of result5.errors) {
   const location = error.line ? ` (line ${error.line}, col ${error.column})` : '';

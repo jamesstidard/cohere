@@ -4,7 +4,7 @@ Project context for Claude.
 
 ## What This Is
 
-A portable JSON validator with relational constraints. Rust core with WASM and Python bindings.
+A portable JSON/TOML validator with relational constraints. Rust core with WASM and Python bindings.
 
 **Use case:** JSON "databases" where entities reference each other:
 
@@ -23,7 +23,7 @@ Extends JSON Schema with three custom keywords:
 ## Build
 
 ```bash
-cargo test -p graph-validator-core   # Core tests
+cargo test -p cohere-core   # Core tests
 cd crates/wasm && wasm-pack build --target web   # WASM
 cd crates/python && maturin develop   # Python
 ```

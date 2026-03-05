@@ -1,4 +1,4 @@
-use graph_validator_core::{validate_json, validate_toml, Schema};
+use cohere_core::{validate_json, validate_toml as core_validate_toml, Schema};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -26,7 +26,7 @@ struct WasmValidationError {
 /// # Returns
 /// A JavaScript object with `valid: boolean`, `errors: Array` (with line/column)
 #[wasm_bindgen]
-pub fn validate_graph(schema_json: &str, data_json: &str) -> Result<JsValue, JsValue> {
+pub fn validate(schema_json: &str, data_json: &str) -> Result<JsValue, JsValue> {
     let schema_value: serde_json::Value = serde_json::from_str(schema_json)
         .map_err(|e| JsValue::from_str(&format!("Invalid schema JSON: {}", e)))?;
 
@@ -68,14 +68,14 @@ pub fn validate_graph(schema_json: &str, data_json: &str) -> Result<JsValue, JsV
 /// # Returns
 /// A JavaScript object with `valid: boolean`, `errors: Array` (with line/column)
 #[wasm_bindgen]
-pub fn validate_graph_toml(schema_json: &str, data_toml: &str) -> Result<JsValue, JsValue> {
+pub fn validate_toml(schema_json: &str, data_toml: &str) -> Result<JsValue, JsValue> {
     let schema_value: serde_json::Value = serde_json::from_str(schema_json)
         .map_err(|e| JsValue::from_str(&format!("Invalid schema JSON: {}", e)))?;
 
     let schema = Schema::parse(schema_value)
         .map_err(|e| JsValue::from_str(&format!("Invalid schema: {}", e)))?;
 
-    let validation_result = validate_toml(&schema, data_toml)
+    let validation_result = core_validate_toml(&schema, data_toml)
         .map_err(|e| JsValue::from_str(&format!("Invalid TOML: {}", e)))?;
 
     let result = match validation_result {
