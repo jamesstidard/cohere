@@ -140,7 +140,52 @@ def example3_graph_structure():
     print_result("Example 3: Graph Nodes and Edges", result)
 
 
-def example4_using_bool():
+def example4_toml_validation():
+    """Example using TOML data (validate_graph_toml)."""
+    schema = json.dumps({
+        "x-uniqueAcross": [
+            {
+                "paths": ["users[*].name"],
+                "message": "Duplicate user name '{{value}}'"
+            }
+        ],
+        "x-references": [
+            {
+                "from": "organisations[*].members[*]",
+                "to": ["users[*].name"],
+                "message": "Unknown member '{{value}}'"
+            }
+        ]
+    })
+
+    data_toml = """\
+[[users]]
+name = "alice"
+
+[[users]]
+name = "bob"
+
+[[organisations]]
+name = "acme"
+members = ["alice", "charlie"]
+"""
+
+    result = graph_validator.validate_graph_toml(schema, data_toml)
+    print(f"\n{'=' * 60}")
+    print("Example 4: TOML Validation (with line/column)")
+    print('=' * 60)
+    print(f"Valid: {result.valid}")
+    if result.errors:
+        print("Errors:")
+        for error in result.errors:
+            location = ""
+            if error.line is not None:
+                location = f" (line {error.line}, col {error.column})"
+            print(f"  • {error.message}{location}")
+    print()
+
+
+def example5_using_bool():
     """Example showing truthiness of ValidationResult."""
     schema = {
         "x-references": [
@@ -175,7 +220,8 @@ if __name__ == "__main__":
     example1_json_strings()
     example2_python_dicts()
     example3_graph_structure()
-    example4_using_bool()
+    example4_toml_validation()
+    example5_using_bool()
 
     print("\n" + "=" * 60)
     print("All examples completed!")

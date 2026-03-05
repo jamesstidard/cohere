@@ -108,3 +108,34 @@ const data3 = JSON.stringify({
 const result3 = validate_graph(schema3, data3);
 console.log('Valid:', result3.valid);
 console.log('Errors:', result3.errors);
+console.log('');
+
+// Example 4: Error Location (line/column)
+console.log('=== Example 4: Error Location (line/column) ===\n');
+
+const schema4 = JSON.stringify({
+  "x-references": [
+    {
+      "from": "organisations[*].members[*]",
+      "to": ["users[*].name"],
+      "message": "Unknown member '{{value}}'"
+    }
+  ]
+});
+
+// Multi-line JSON string to demonstrate line/column in errors
+const data4 = `{
+  "users": [
+    {"name": "alice"}
+  ],
+  "organisations": [
+    {"name": "acme", "members": ["alice", "charlie"]}
+  ]
+}`;
+
+const result4 = validate_graph(schema4, data4);
+console.log('Valid:', result4.valid);
+for (const error of result4.errors) {
+  const location = error.line ? ` (line ${error.line}, col ${error.column})` : '';
+  console.log(`  • ${error.message}${location}`);
+}
