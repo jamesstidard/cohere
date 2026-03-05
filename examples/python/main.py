@@ -10,7 +10,6 @@ Run this after installing the package:
 """
 
 import cohere
-import json
 
 
 def print_result(title, result):
@@ -22,13 +21,16 @@ def print_result(title, result):
     if result.errors:
         print("Errors:")
         for error in result.errors:
-            print(f"  • {error}")
+            location = ""
+            if error.line is not None:
+                location = f" (line {error.line}, col {error.column})"
+            print(f"  • {error.message}{location}")
     print()
 
 
 def example1_json_strings():
-    """Example using JSON strings (validate)."""
-    schema = '''
+    """Example using JSON strings."""
+    schema = cohere.Schema('''
     {
       "x-uniqueAcross": [
         {
@@ -52,7 +54,7 @@ def example1_json_strings():
         }
       ]
     }
-    '''
+    ''')
 
     data = '''
     {
@@ -66,13 +68,13 @@ def example1_json_strings():
     }
     '''
 
-    result = cohere.validate(schema, data)
-    print_result("Example 1: Users and Organizations (JSON Strings)", result)
+    result = schema.validate_json(data)
+    print_result("Example 1: Users and Organizations (JSON)", result)
 
 
 def example2_python_dicts():
-    """Example using Python dicts (validate_dict)."""
-    schema = {
+    """Example using a Python dict for the schema."""
+    schema = cohere.Schema({
         "x-references": [
             {
                 "from": "organisations[*].members[*]",
@@ -88,25 +90,27 @@ def example2_python_dicts():
                 "message": "User '{{value}}' is not in any organisation"
             }
         ]
-    }
+    })
 
-    data = {
-        "users": [
-            {"name": "alice", "age": 32},
-            {"name": "orphan", "age": 25}
-        ],
-        "organisations": [
-            {"name": "acme", "members": ["alice", "charlie"]}
-        ]
+    data = '''
+    {
+      "users": [
+        {"name": "alice", "age": 32},
+        {"name": "orphan", "age": 25}
+      ],
+      "organisations": [
+        {"name": "acme", "members": ["alice", "charlie"]}
+      ]
     }
+    '''
 
-    result = cohere.validate_dict(schema, data)
-    print_result("Example 2: Invalid Data (Python Dicts)", result)
+    result = schema.validate_json(data)
+    print_result("Example 2: Invalid Data", result)
 
 
 def example3_graph_structure():
     """Example with node/edge graph structure."""
-    schema = {
+    schema = cohere.Schema({
         "x-uniqueAcross": [
             {"paths": ["nodes[*].name", "edges[*].name"]}
         ],
@@ -122,27 +126,29 @@ def example3_graph_structure():
                 "message": "Node '{{value}}' is not connected to any edges"
             }
         ]
-    }
+    })
 
-    data = {
-        "nodes": [
-            {"name": "start"},
-            {"name": "middle"},
-            {"name": "end"}
-        ],
-        "edges": [
-            {"name": "edge1", "from": "start", "to": "middle"},
-            {"name": "edge2", "from": "middle", "to": "end"}
-        ]
+    data = '''
+    {
+      "nodes": [
+        {"name": "start"},
+        {"name": "middle"},
+        {"name": "end"}
+      ],
+      "edges": [
+        {"name": "edge1", "from": "start", "to": "middle"},
+        {"name": "edge2", "from": "middle", "to": "end"}
+      ]
     }
+    '''
 
-    result = cohere.validate_dict(schema, data)
+    result = schema.validate_json(data)
     print_result("Example 3: Graph Nodes and Edges", result)
 
 
 def example4_toml_validation():
-    """Example using TOML data (validate_toml_str)."""
-    schema = json.dumps({
+    """Example using TOML data."""
+    schema = cohere.Schema({
         "x-uniqueAcross": [
             {
                 "paths": ["users[*].name"],
@@ -170,45 +176,26 @@ name = "acme"
 members = ["alice", "charlie"]
 """
 
-    result = cohere.validate_toml_str(schema, data_toml)
-    print(f"\n{'=' * 60}")
-    print("Example 4: TOML Validation (with line/column)")
-    print('=' * 60)
-    print(f"Valid: {result.valid}")
-    if result.errors:
-        print("Errors:")
-        for error in result.errors:
-            location = ""
-            if error.line is not None:
-                location = f" (line {error.line}, col {error.column})"
-            print(f"  • {error.message}{location}")
-    print()
+    result = schema.validate_toml(data_toml)
+    print_result("Example 4: TOML Validation (with line/column)", result)
 
 
 def example5_using_bool():
     """Example showing truthiness of ValidationResult."""
-    schema = {
+    schema = cohere.Schema({
         "x-references": [
             {"from": "tags[*]", "to": ["valid_tags[*]"]}
         ]
-    }
+    })
 
-    valid_data = {
-        "valid_tags": ["python", "rust", "wasm"],
-        "tags": ["python", "rust"]
-    }
+    valid_data = '{"valid_tags": ["python", "rust", "wasm"], "tags": ["python", "rust"]}'
+    invalid_data = '{"valid_tags": ["python", "rust", "wasm"], "tags": ["python", "javascript"]}'
 
-    invalid_data = {
-        "valid_tags": ["python", "rust", "wasm"],
-        "tags": ["python", "javascript"]  # javascript is not in valid_tags
-    }
-
-    # ValidationResult can be used in boolean context
-    result1 = cohere.validate_dict(schema, valid_data)
+    result1 = schema.validate_json(valid_data)
     if result1:
         print("\n✓ Valid data passed validation")
 
-    result2 = cohere.validate_dict(schema, invalid_data)
+    result2 = schema.validate_json(invalid_data)
     if not result2:
         print("✗ Invalid data failed validation")
         print(f"  Errors: {result2.errors}")

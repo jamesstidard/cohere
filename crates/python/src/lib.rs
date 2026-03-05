@@ -1,9 +1,8 @@
-use cohere_core::{validate_json, validate_toml, Schema, ValidationError};
+use cohere_core::{validate_json, validate_toml as core_validate_toml, Schema, ValidationError};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-/// A validation error returned to Python
 #[pyclass]
 #[derive(Clone)]
 struct PyValidationError {
@@ -42,7 +41,6 @@ impl From<ValidationError> for PyValidationError {
     }
 }
 
-/// Result of validation
 #[pyclass]
 struct ValidationResult {
     #[pyo3(get)]
@@ -66,104 +64,71 @@ impl ValidationResult {
     }
 }
 
-/// Validate JSON data against a schema with custom x- keywords.
-///
-/// Error locations (line/column) are mapped back to the JSON source.
-///
-/// Args:
-///     schema_json: JSON string of the schema
-///     data_json: JSON string of the data to validate
-///
-/// Returns:
-///     ValidationResult with `valid` bool and `errors` list (with line/column)
-#[pyfunction]
-fn validate(schema_json: &str, data_json: &str) -> PyResult<ValidationResult> {
-    let schema_value: serde_json::Value = serde_json::from_str(schema_json)
-        .map_err(|e| PyValueError::new_err(format!("Invalid schema JSON: {}", e)))?;
-
-    let schema = Schema::parse(schema_value)
-        .map_err(|e| PyValueError::new_err(format!("Invalid schema: {}", e)))?;
-
-    let result = validate_json(&schema, data_json)
-        .map_err(|e| PyValueError::new_err(format!("Invalid data JSON: {}", e)))?;
-
+fn make_result(
+    result: Result<(), Vec<ValidationError>>,
+) -> ValidationResult {
     match result {
-        Ok(()) => Ok(ValidationResult {
+        Ok(()) => ValidationResult {
             valid: true,
             errors: vec![],
-        }),
-        Err(errors) => Ok(ValidationResult {
+        },
+        Err(errors) => ValidationResult {
             valid: false,
             errors: errors.into_iter().map(PyValidationError::from).collect(),
-        }),
+        },
     }
 }
 
-/// Validate using Python dicts instead of JSON strings
-#[pyfunction]
-fn validate_dict(py: Python<'_>, schema: &PyDict, data: &PyDict) -> PyResult<ValidationResult> {
-    let schema_json = dict_to_json_string(py, schema)?;
-    let data_json = dict_to_json_string(py, data)?;
-    validate(&schema_json, &data_json)
+#[pyclass(name = "Schema")]
+struct PySchema {
+    inner: Schema,
 }
 
-fn dict_to_json_string(py: Python<'_>, dict: &PyDict) -> PyResult<String> {
-    let json_module = py.import("json")?;
-    let json_str = json_module.call_method1("dumps", (dict,))?;
-    json_str.extract()
-}
+#[pymethods]
+impl PySchema {
+    #[new]
+    fn new(py: Python<'_>, schema: PyObject) -> PyResult<Self> {
+        let json_str = if let Ok(dict) = schema.downcast::<PyDict>(py) {
+            let json_module = py.import("json")?;
+            let s = json_module.call_method1("dumps", (dict,))?;
+            s.extract::<String>()?
+        } else if let Ok(s) = schema.extract::<String>(py) {
+            s
+        } else {
+            return Err(PyValueError::new_err(
+                "Schema must be a dict or a JSON string",
+            ));
+        };
 
-/// Validate TOML data against a schema with custom x- keywords.
-///
-/// Error locations (line/column) are mapped back to the TOML source.
-///
-/// Args:
-///     schema_json: JSON string of the schema
-///     data_toml: TOML string of the data to validate
-///
-/// Returns:
-///     ValidationResult with `valid` bool and `errors` list (with line/column)
-#[pyfunction]
-fn validate_toml_str(schema_json: &str, data_toml: &str) -> PyResult<ValidationResult> {
-    let schema_value: serde_json::Value = serde_json::from_str(schema_json)
-        .map_err(|e| PyValueError::new_err(format!("Invalid schema JSON: {}", e)))?;
+        let schema_value: serde_json::Value = serde_json::from_str(&json_str)
+            .map_err(|e| PyValueError::new_err(format!("Invalid schema JSON: {}", e)))?;
 
-    let schema = Schema::parse(schema_value)
-        .map_err(|e| PyValueError::new_err(format!("Invalid schema: {}", e)))?;
+        let inner = Schema::parse(schema_value)
+            .map_err(|e| PyValueError::new_err(format!("Invalid schema: {}", e)))?;
 
-    let result = validate_toml(&schema, data_toml)
-        .map_err(|e| PyValueError::new_err(format!("Invalid TOML: {}", e)))?;
-
-    match result {
-        Ok(()) => Ok(ValidationResult {
-            valid: true,
-            errors: vec![],
-        }),
-        Err(errors) => Ok(ValidationResult {
-            valid: false,
-            errors: errors.into_iter().map(PyValidationError::from).collect(),
-        }),
+        Ok(Self { inner })
     }
-}
 
-/// Parse a schema and check for errors
-#[pyfunction]
-fn parse_schema(schema_json: &str) -> PyResult<()> {
-    let schema_value: serde_json::Value = serde_json::from_str(schema_json)
-        .map_err(|e| PyValueError::new_err(format!("Invalid JSON: {}", e)))?;
+    fn validate_json(&self, data_json: &str) -> PyResult<ValidationResult> {
+        let result = validate_json(&self.inner, data_json)
+            .map_err(|e| PyValueError::new_err(format!("Invalid JSON: {}", e)))?;
+        Ok(make_result(result))
+    }
 
-    Schema::parse(schema_value)
-        .map_err(|e| PyValueError::new_err(format!("Invalid schema: {}", e)))?;
+    fn validate_toml(&self, data_toml: &str) -> PyResult<ValidationResult> {
+        let result = core_validate_toml(&self.inner, data_toml)
+            .map_err(|e| PyValueError::new_err(format!("Invalid TOML: {}", e)))?;
+        Ok(make_result(result))
+    }
 
-    Ok(())
+    fn __repr__(&self) -> String {
+        "Schema(...)".to_string()
+    }
 }
 
 #[pymodule]
 fn cohere(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(validate, m)?)?;
-    m.add_function(wrap_pyfunction!(validate_dict, m)?)?;
-    m.add_function(wrap_pyfunction!(validate_toml_str, m)?)?;
-    m.add_function(wrap_pyfunction!(parse_schema, m)?)?;
+    m.add_class::<PySchema>()?;
     m.add_class::<ValidationResult>()?;
     m.add_class::<PyValidationError>()?;
     Ok(())

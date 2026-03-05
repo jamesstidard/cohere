@@ -180,7 +180,8 @@ cargo test -p cohere-core
 ### WASM (for JavaScript)
 ```bash
 cd crates/wasm
-wasm-pack build --target web
+wasm-pack build --target bundler  # For bundlers (webpack, vite, esbuild)
+wasm-pack build --target web      # For standalone use (requires init())
 ```
 
 Output: `crates/wasm/pkg/`
@@ -194,14 +195,14 @@ maturin build --release  # Build wheel
 
 ## Usage
 
-### JavaScript
+### JavaScript (with bundler)
+
+When using a bundler (webpack, vite, esbuild), WASM is loaded automatically:
 
 ```javascript
-import init, { validate, validate_toml } from './pkg/cohere_wasm.js';
+import { Schema } from 'cohere-wasm';
 
-await init();
-
-const schema = JSON.stringify({
+const schema = new Schema({
   "x-references": [
     { "from": "organisations[*].members[*]", "to": ["users[*].name"] }
   ]
@@ -213,7 +214,7 @@ const data = `{
   "organisations": [{"name": "acme", "members": ["alice", "bob"]}]
 }`;
 
-const result = validate(schema, data);
+const result = schema.validateJson(data);
 console.log(result.valid);  // true
 console.log(result.errors); // []
 
@@ -230,7 +231,7 @@ name = "acme"
 members = ["alice", "bob"]
 `;
 
-const tomlResult = validate_toml(schema, toml);
+const tomlResult = schema.validateToml(toml);
 console.log(tomlResult.valid);  // true
 
 // Errors include source locations (line/column)
@@ -239,13 +240,25 @@ for (const error of result.errors) {
 }
 ```
 
+### JavaScript (without bundler)
+
+When using `wasm-pack build --target web`, you need to call `init()` first to load the WASM module:
+
+```javascript
+import init, { Schema } from './pkg/cohere_wasm.js';
+
+await init();
+
+const schema = new Schema({...});
+const result = schema.validateJson(data);
+```
+
 ### Python
 
 ```python
 import cohere
-import json
 
-schema = json.dumps({
+schema = cohere.Schema({
     "x-references": [
         {"from": "organisations[*].members[*]", "to": ["users[*].name"]}
     ]
@@ -262,7 +275,7 @@ data_json = """
   ]
 }
 """
-result = cohere.validate(schema, data_json)
+result = schema.validate_json(data_json)
 print(result.valid)   # True
 
 # TOML validation (with line/column in errors)
@@ -274,15 +287,12 @@ name = "alice"
 name = "acme"
 members = ["alice"]
 """
-result = cohere.validate_toml_str(schema, data_toml)
+result = schema.validate_toml(data_toml)
 print(result.valid)   # True
 
 # Errors include source locations
 for error in result.errors:
     print(f"{error.message} (line {error.line}, col {error.column})")
-
-# Or use dicts directly (no source locations)
-result = cohere.validate_dict(schema_dict, data_dict)
 ```
 
 ## Error Message Placeholders
