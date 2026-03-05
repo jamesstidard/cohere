@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use serde_json::Value;
 
 use crate::schema::{ReferencedByRule, ReferencesRule, Schema, UniqueAcrossRule};
+use crate::source_map::SourceMap;
 
 /// Result of validation
 pub type ValidationResult = Result<(), Vec<ValidationError>>;
@@ -13,6 +14,8 @@ pub struct ValidationError {
     pub message: String,
     pub path: Option<String>,
     pub value: Option<String>,
+    pub line: Option<usize>,
+    pub column: Option<usize>,
 }
 
 impl std::fmt::Display for ValidationError {
@@ -52,6 +55,50 @@ pub fn validate(schema: &Schema, data: &Value) -> ValidationResult {
     }
 }
 
+/// Validate a JSON string against a schema, with error locations mapped
+/// back to the JSON source.
+///
+/// Returns `Err(JsonError)` if the JSON cannot be parsed,
+/// or `Ok(ValidationResult)` with enriched errors containing line/column info.
+pub fn validate_json(schema: &Schema, json_src: &str) -> Result<ValidationResult, crate::json::JsonError> {
+    let (data, source_map) = crate::json::json_with_source_map(json_src)?;
+
+    match validate(schema, &data) {
+        Ok(()) => Ok(Ok(())),
+        Err(errors) => Ok(Err(enrich_errors(errors, &source_map))),
+    }
+}
+
+/// Validate a TOML string against a schema, with error locations mapped
+/// back to the TOML source.
+///
+/// Returns `Err(TomlError)` if the TOML cannot be parsed,
+/// or `Ok(ValidationResult)` with enriched errors containing line/column info.
+pub fn validate_toml(schema: &Schema, toml_src: &str) -> Result<ValidationResult, crate::toml::TomlError> {
+    let (data, source_map) = crate::toml::toml_to_json(toml_src)?;
+
+    match validate(schema, &data) {
+        Ok(()) => Ok(Ok(())),
+        Err(errors) => Ok(Err(enrich_errors(errors, &source_map))),
+    }
+}
+
+/// Enrich validation errors with source location information from a source map.
+pub fn enrich_errors(errors: Vec<ValidationError>, source_map: &SourceMap) -> Vec<ValidationError> {
+    errors
+        .into_iter()
+        .map(|mut err| {
+            if let Some(ref path) = err.path {
+                if let Some(span) = source_map.get(path) {
+                    err.line = Some(span.line);
+                    err.column = Some(span.column);
+                }
+            }
+            err
+        })
+        .collect()
+}
+
 fn validate_json_schema(
     validator: &jsonschema::Validator,
     data: &Value,
@@ -73,6 +120,8 @@ fn convert_jsonschema_error(error: &jsonschema::ValidationError) -> ValidationEr
         message: error.to_string(),
         path: if path.is_empty() { None } else { Some(path) },
         value: Some(value),
+        line: None,
+        column: None,
     }
 }
 
@@ -127,6 +176,8 @@ fn validate_unique_across(rule: &UniqueAcrossRule, data: &Value) -> Vec<Validati
                     message,
                     path: Some(m.path),
                     value: Some(value_to_string(m.value)),
+                    line: None,
+                    column: None,
                 });
             } else {
                 seen.insert(m.value, m.path);
@@ -166,6 +217,8 @@ fn validate_references(rule: &ReferencesRule, data: &Value) -> Vec<ValidationErr
                 message,
                 path: Some(m.path),
                 value: Some(value_to_string(m.value)),
+                line: None,
+                column: None,
             });
         }
     }
@@ -206,6 +259,8 @@ fn validate_referenced_by(rule: &ReferencedByRule, data: &Value) -> Vec<Validati
                 message,
                 path: Some(m.path.clone()),
                 value: Some(value_to_string(m.value)),
+                line: None,
+                column: None,
             });
         }
 
@@ -223,6 +278,8 @@ fn validate_referenced_by(rule: &ReferencedByRule, data: &Value) -> Vec<Validati
                     message,
                     path: Some(m.path),
                     value: Some(value_to_string(m.value)),
+                    line: None,
+                    column: None,
                 });
             }
         }

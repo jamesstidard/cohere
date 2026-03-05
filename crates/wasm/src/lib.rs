@@ -1,4 +1,4 @@
-use graph_validator_core::{validate, Schema};
+use graph_validator_core::{validate_json, Schema};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -13,6 +13,8 @@ struct WasmValidationError {
     message: String,
     path: Option<String>,
     value: Option<String>,
+    line: Option<usize>,
+    column: Option<usize>,
 }
 
 /// Validate JSON data against a schema
@@ -22,19 +24,19 @@ struct WasmValidationError {
 /// * `data_json` - JSON string of the data to validate
 ///
 /// # Returns
-/// A JavaScript object with `valid: boolean` and `errors: Array`
+/// A JavaScript object with `valid: boolean`, `errors: Array` (with line/column)
 #[wasm_bindgen]
 pub fn validate_graph(schema_json: &str, data_json: &str) -> Result<JsValue, JsValue> {
     let schema_value: serde_json::Value = serde_json::from_str(schema_json)
         .map_err(|e| JsValue::from_str(&format!("Invalid schema JSON: {}", e)))?;
 
-    let data_value: serde_json::Value = serde_json::from_str(data_json)
-        .map_err(|e| JsValue::from_str(&format!("Invalid data JSON: {}", e)))?;
-
     let schema = Schema::parse(schema_value)
         .map_err(|e| JsValue::from_str(&format!("Invalid schema: {}", e)))?;
 
-    let result = match validate(&schema, &data_value) {
+    let validation_result = validate_json(&schema, data_json)
+        .map_err(|e| JsValue::from_str(&format!("Invalid data JSON: {}", e)))?;
+
+    let result = match validation_result {
         Ok(()) => WasmValidationResult {
             valid: true,
             errors: vec![],
@@ -47,6 +49,8 @@ pub fn validate_graph(schema_json: &str, data_json: &str) -> Result<JsValue, JsV
                     message: e.message,
                     path: e.path,
                     value: e.value,
+                    line: e.line,
+                    column: e.column,
                 })
                 .collect(),
         },
