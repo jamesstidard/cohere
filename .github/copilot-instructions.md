@@ -4,7 +4,7 @@ Context for AI coding assistants (GitHub Copilot, Cursor, Claude, etc.).
 
 ## Project Overview
 
-`graph-validator` extends JSON Schema with relational constraints for JSON "databases" — documents where entities reference each other by name.
+`cohere` extends JSON Schema with relational constraints for JSON "databases" — documents where entities reference each other by name.
 
 **Example use case:**
 ```json
@@ -71,8 +71,8 @@ Ensures every value at `target` is referenced at least `min` times by values at 
 
 ```bash
 # Core
-cargo build -p graph-validator-core
-cargo test -p graph-validator-core
+cargo build -p cohere-core
+cargo test -p cohere-core
 
 # WASM
 cd crates/wasm && wasm-pack build --target web

@@ -1,6 +1,6 @@
 # Graph Validator Examples
 
-This directory contains working examples demonstrating how to use graph-validator in JavaScript and Python.
+This directory contains working examples demonstrating how to use cohere in JavaScript and Python.
 
 ## Prerequisites
 
