@@ -197,7 +197,7 @@ maturin build --release  # Build wheel
 ### JavaScript
 
 ```javascript
-import init, { validate_graph } from './pkg/graph_validator_wasm.js';
+import init, { validate_graph, validate_graph_toml } from './pkg/graph_validator_wasm.js';
 
 await init();
 
@@ -207,6 +207,7 @@ const schema = JSON.stringify({
   ]
 });
 
+// JSON validation
 const data = `{
   "users": [{"name": "alice"}, {"name": "bob"}],
   "organisations": [{"name": "acme", "members": ["alice", "bob"]}]
@@ -215,6 +216,22 @@ const data = `{
 const result = validate_graph(schema, data);
 console.log(result.valid);  // true
 console.log(result.errors); // []
+
+// TOML validation
+const toml = `
+[[users]]
+name = "alice"
+
+[[users]]
+name = "bob"
+
+[[organisations]]
+name = "acme"
+members = ["alice", "bob"]
+`;
+
+const tomlResult = validate_graph_toml(schema, toml);
+console.log(tomlResult.valid);  // true
 
 // Errors include source locations (line/column)
 for (const error of result.errors) {

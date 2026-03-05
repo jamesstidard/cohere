@@ -1,7 +1,7 @@
 // Basic usage example for graph-validator WASM bindings
 // This file shows the core API usage without the HTML wrapper
 
-import init, { validate_graph } from '../../crates/wasm/pkg/graph_validator_wasm.js';
+import init, { validate_graph, validate_graph_toml } from '../../crates/wasm/pkg/graph_validator_wasm.js';
 
 // Initialize WASM module
 await init();
@@ -136,6 +136,35 @@ const data4 = `{
 const result4 = validate_graph(schema4, data4);
 console.log('Valid:', result4.valid);
 for (const error of result4.errors) {
+  const location = error.line ? ` (line ${error.line}, col ${error.column})` : '';
+  console.log(`  • ${error.message}${location}`);
+}
+
+// Example 5: TOML Validation (with line/column)
+console.log('\n=== Example 5: TOML Validation ===\n');
+
+const schema5 = JSON.stringify({
+  "x-references": [
+    {
+      "from": "organisations[*].members[*]",
+      "to": ["users[*].name"],
+      "message": "Unknown member '{{value}}'"
+    }
+  ]
+});
+
+const data5 = `
+[[users]]
+name = "alice"
+
+[[organisations]]
+name = "acme"
+members = ["alice", "charlie"]
+`;
+
+const result5 = validate_graph_toml(schema5, data5);
+console.log('Valid:', result5.valid);
+for (const error of result5.errors) {
   const location = error.line ? ` (line ${error.line}, col ${error.column})` : '';
   console.log(`  • ${error.message}${location}`);
 }
