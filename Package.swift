@@ -10,7 +10,7 @@ import Foundation
 // checksummed release artifact. The two lines below are rewritten on each
 // release by the Release workflow (.github/workflows/release.yml).
 let releaseVersion = "0.1.0"
-let releaseChecksum = "0000000000000000000000000000000000000000000000000000000000000000"
+let releaseChecksum = "8f5ce99f28e52b19c548999002cfae8ca319e7112d0e97ada9ddc4da1a6f237e"
 
 let swiftSources = "bindings/swift/Cohere/Sources/Cohere"
 let swiftTests = "bindings/swift/Cohere/Tests/CohereTests"
