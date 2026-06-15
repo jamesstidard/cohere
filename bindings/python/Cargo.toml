@@ -1,0 +1,19 @@
+[package]
+name = "cohere-python"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "cohere"
+crate-type = ["cdylib"]
+
+[dependencies]
+cohere-core = { path = "../../crates/core" }
+pyo3 = { version = "0.20", features = ["extension-module"] }
+serde_json = "1"
+
+[features]
+# Enabled by the release build (maturin --features abi3) to produce a single
+# forward-compatible wheel per platform (Python 3.8+). Kept off by default so a
+# plain `cargo build`/`cargo test` of the workspace still links.
+abi3 = ["pyo3/abi3-py38"]

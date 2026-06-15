@@ -56,6 +56,19 @@ $RECYCLE.BIN/
 *.tmp
 *.log
 
+# WASM (wasm-pack output)
+/bindings/wasm/pkg/
+
+# Swift (build artifacts produced by bindings/swift/Cohere/build-xcframework.sh)
+/.build/
+/.swiftpm/
+Package.resolved
+/bindings/swift/Cohere/.build/
+/bindings/swift/Cohere/.build-xcframework/
+/bindings/swift/Cohere/Cohere.xcframework/
+/bindings/swift/Cohere/Cohere.xcframework.zip
+/examples/swift/.build/
+
 # Dev environment tools
 mise.toml
 .mise.toml

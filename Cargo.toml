@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/core",
-    "crates/wasm",
-    "crates/python",
+    "bindings/wasm",
+    "bindings/python",
+    "bindings/swift/ffi",
 ]

@@ -1,6 +1,6 @@
-# Graph Validator Examples
+# Cohere Examples
 
-This directory contains working examples demonstrating how to use cohere in JavaScript and Python.
+This directory contains working examples demonstrating how to use cohere in JavaScript, Python, and Swift.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ This directory contains working examples demonstrating how to use cohere in Java
 
 1. Build the WASM package:
    ```bash
-   cd crates/wasm
+   cd bindings/wasm
    wasm-pack build --target web
    cd ../..
    ```
@@ -17,9 +17,16 @@ This directory contains working examples demonstrating how to use cohere in Java
 
 1. Install the Python package:
    ```bash
-   cd crates/python
+   cd bindings/python
    maturin develop
    cd ../..
+   ```
+
+### For Swift Examples
+
+1. Build the XCFramework the Swift package links against (run from the repo root):
+   ```bash
+   ./bindings/swift/Cohere/build-xcframework.sh
    ```
 
 ## JavaScript Examples
@@ -83,6 +90,26 @@ The example demonstrates:
 2. **Python dicts** - Using `validate_graph_dict()` with native Python dictionaries
 3. **Graph structure** - Validating node/edge relationships
 4. **Boolean context** - Using `ValidationResult` in if statements
+
+## Swift Examples
+
+Run the Swift example with Swift Package Manager:
+
+```bash
+cd examples/swift
+swift run
+```
+
+The example demonstrates:
+1. **Users and organisations** - `x-uniqueAcross`, `x-references`, `x-referencedBy`
+2. **Invalid data** - unknown reference and orphaned entity errors
+3. **Graph structure** - validating node/edge relationships
+4. **TOML validation** - errors carry source line/column
+5. **Branching on the result** - using `result.valid` in a condition
+6. **Parse errors** - malformed input throws `CohereError`, distinct from
+   schema violations
+
+See [`swift/README.md`](swift/README.md) for details.
 
 ## What the Examples Show
 

@@ -23,12 +23,16 @@ Validate that:
 
 ```
 crates/
-├── core/       # Pure Rust validation logic (no platform dependencies)
-├── wasm/       # wasm-bindgen bindings (thin wrapper around core)
-└── python/     # PyO3 bindings (thin wrapper around core)
+└── core/           # Pure Rust validation logic (no platform dependencies)
+bindings/
+├── wasm/           # wasm-bindgen bindings (thin wrapper around core)
+├── python/         # PyO3 bindings (thin wrapper around core)
+└── swift/          # Swift binding
+    ├── ffi/        #   Rust C FFI crate (thin wrapper around core)
+    └── Cohere/     #   SwiftPM package (idiomatic Swift wrapper + XCFramework)
 ```
 
-**Key principle:** All logic lives in `core`. The `wasm` and `python` crates are thin wrappers for serialization and type conversion only.
+**Key principle:** All logic lives in `core`. The binding crates are thin wrappers for serialization and type conversion only.
 
 ## Core Crate Structure
 
@@ -75,18 +79,21 @@ cargo build -p cohere-core
 cargo test -p cohere-core
 
 # WASM
-cd crates/wasm && wasm-pack build --target web
+cd bindings/wasm && wasm-pack build --target web
 
 # Python
-cd crates/python && maturin develop
+cd bindings/python && maturin develop
+
+# Swift
+./bindings/swift/Cohere/build-xcframework.sh
 ```
 
 ## When Adding Features
 
 1. **Add to core first** — implement the logic in `crates/core/`
 2. **Add tests** — inline `#[cfg(test)]` module
-3. **Update wasm bindings** — if new public API, expose in `crates/wasm/src/lib.rs`
-4. **Update python bindings** — if new public API, expose in `crates/python/src/lib.rs`
+3. **Update wasm bindings** — if new public API, expose in `bindings/wasm/src/lib.rs`
+4. **Update python bindings** — if new public API, expose in `bindings/python/src/lib.rs` (and Swift in `bindings/swift/ffi/src/lib.rs`)
 5. **Add fixture tests** — JSON test cases in `tests/fixtures/valid/` and `tests/fixtures/invalid/`
 
 ## Common Tasks

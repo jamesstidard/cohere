@@ -1,0 +1,4 @@
+module CCohere {
+    header "cohere.h"
+    export *
+}
